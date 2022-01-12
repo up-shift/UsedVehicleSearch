@@ -78,8 +78,10 @@ def runScraper():
             
             #now we scrape
             try:
-                searchUrl = f"{city[1]}/d/cars-trucks/search/cta?s={scrapedInCity}"
+                searchUrl = f"{city[1]}d/cars-trucks/search/cta?s={scrapedInCity}"
                 page = session.get(searchUrl)
+                print("search url: {}".format(searchUrl))
+                print("city: {}".format(city[1]))
             except Exception as e:
                 #catch any excpetion and continue the loop if we cannot access a site for whatever reason
                 print(f"Failed to reach {searchUrl}, entries have been dropped: {e}")
@@ -94,6 +96,7 @@ def runScraper():
             vehicles = tree.xpath('//a[@class="result-image gallery"]')
             if len(vehicles) == 0:
                 #if we no longer have entries, continue to the next city
+                print("no vehicles found")
                 empty = True
                 continue
             vehiclesList = []
@@ -111,6 +114,7 @@ def runScraper():
             #loop through each vehicle
             for item in vehiclesList:
                 url = item[0]
+                print("url: {}".format(url))
                 try:
                     idpk = int(url.split("/")[-1].strip(".html"))
                 except ValueError as e:
@@ -128,6 +132,7 @@ def runScraper():
                 
                 vehicleDict = {}
                 vehicleDict["price"] = int(item[1].replace(",", "").strip("$"))
+                print("price={} ".format(vehicleDict["price"]))
                 
                 try:
                     #grab each individual vehicle page
@@ -151,6 +156,7 @@ def runScraper():
                         #this code fails if item=None so we have to handle it appropriately
                         vehicleDict[k] = item.text.strip()
                     except:
+                        print("Failed")
                         continue
                     
                 #we will assume that each of these variables are None until we hear otherwise
@@ -293,9 +299,11 @@ def runScraper():
             print("{} vehicles scraped".format(scraped))
         
         #now to clean the database we grab all urls from the city that are already logged
-        curs.execute("SELECT id FROM vehicles WHERE region_url = '{}'".format(city[1]))
-        deleted = 0
-        
+        try:
+            curs.execute("SELECT id FROM vehicles WHERE region_url = '{}'".format(city[1]))
+            deleted = 0
+        except:
+            print("DB search error...")
         #if a given id is not in scrapedIds (the ids that we just scraped) then the entry no longer exists and we remove it
         for oldId in curs.fetchall():
             if int(oldId[0]) not in scrapedIds:
